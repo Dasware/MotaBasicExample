@@ -111,7 +111,7 @@ public class MotaBle {
         conf[0]=(byte)startstop;
         conf[1]=(byte)accelrange;
         conf[2]=(byte)gyrorange;
-
+        Log.i("Conf",""+conf[0]+conf[1]+conf[2]);
         BluetoothGattCharacteristic confChar = motaGatt.getService(Service).getCharacteristic(Conf_GattChar);
         confChar.setValue(conf);
         return motaGatt.writeCharacteristic(confChar);

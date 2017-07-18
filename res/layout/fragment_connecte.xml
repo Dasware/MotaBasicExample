@@ -31,8 +31,8 @@
     <RelativeLayout
         android:id="@+id/buttons"
         android:layout_width="match_parent"
-        android:layout_height="335dp"
-        android:visibility="gone">
+        android:layout_height="match_parent"
+        android:visibility="visible">
 
 
         <SeekBar
@@ -40,22 +40,22 @@
             style="@style/Widget.AppCompat.SeekBar.Discrete"
             android:layout_width="150dp"
             android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_below="@+id/gyroSB"
             android:layout_marginTop="39dp"
             android:max="3"
-            android:progress="0"
-            android:layout_below="@+id/gyroSB"
-            android:layout_alignParentStart="true" />
+            android:progress="0" />
 
         <SeekBar
             android:id="@+id/gyroSB"
             style="@style/Widget.AppCompat.SeekBar.Discrete"
             android:layout_width="150dp"
             android:layout_height="wrap_content"
-            android:max="3"
-            android:progress="0"
-            android:layout_alignParentTop="true"
             android:layout_alignParentStart="true"
-            android:layout_marginTop="27dp" />
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="27dp"
+            android:max="3"
+            android:progress="0" />
 
         <TextView
             android:id="@+id/acceltv"
@@ -86,11 +86,44 @@
             android:id="@+id/readingpb"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:indeterminate="true"
-            android:visibility="invisible"
             android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
             android:layout_below="@+id/startBtn"
-            android:layout_alignParentEnd="true" />
+            android:indeterminate="true"
+            android:visibility="invisible" />
+
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentStart="true"
+            android:layout_below="@+id/startBtn">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/logtv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_below="@+id/readingpb"
+                    android:layout_marginStart="11dp"
+                    android:text="Log:\n" />
+
+                <Button
+                    android:id="@+id/sendBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="Send/Save Data"
+                    android:visibility="visible" />
+
+            </LinearLayout>
+        </ScrollView>
 
     </RelativeLayout>
 

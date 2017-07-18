@@ -24,6 +24,8 @@ import com.opencsv.CSVWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,6 +42,7 @@ public class BluetoothLeService extends Service {
                 gatt.discoverServices();
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i("Service/BleCallBack", "STATE_DISCONNECTED");
+                sendLog("Unexpected disconnection!!");
             }
         }
 
@@ -55,8 +58,23 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-            Log.i("CB", "Received data...");
-            parsedata(characteristic.getValue());
+            Log.i("CB", "Received data... "+characteristic.getValue()[0] +characteristic.getValue()[1]);
+                parsedata(characteristic.getValue());
+
+
+        }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicRead(gatt, characteristic, status);
+            byte value[] = characteristic.getValue();
+
+            if(value[0]==104){
+                sendLog("Sensor Ok!");
+            }else{
+                sendLog("Warning: Fallo de lectura WAI MPU-6050");
+            }
+
         }
 
         @Override
@@ -72,6 +90,7 @@ public class BluetoothLeService extends Service {
             super.onDescriptorWrite(gatt, descriptor, status);
 
             getApplicationContext().sendBroadcast(new Intent("conectado"));
+            gatt.readCharacteristic(gatt.getService(myMota.Service).getCharacteristic(myMota.Data_GattChar));
         }
     };
 
@@ -134,7 +153,17 @@ public class BluetoothLeService extends Service {
     }
 
     public void conf(int a, int b, int c){
-        myMota.conf(a,b,c);
+       Log.i("Coonf", ""+myMota.conf(a,b,c));
+        String accel[]={"±2","±4","±8","±16"};
+        String gyro[]={"±250","±500","±1000","±2000"};
+        if(a==0){
+            sendLog("Stopped- Measurement time: "+ (System.currentTimeMillis()-ConnectedFragment.stime)+"ms");
+        }else{
+            Date date = new Date();
+            String fecha =new Timestamp(date.getTime()).toString();
+            sendLog("Started("+accel[b]+"mg / "+gyro[c]+"º/s )- "+fecha);
+        }
+
     }
 
     /**
@@ -163,20 +192,20 @@ public class BluetoothLeService extends Service {
         vals[4]=parseAccel(data[8],data[9]);
         vals[5]=parseAccel(data[10],data[11]);
         vals[6]=parseAccel(data[12],data[13]);
-
+        Log.i("ParseAccel", ""+vals[0]);
         switch (myMota.conf[1]){
 
             case 0:
-                adiv=16384;
+                adiv=16384.0;
                 break;
             case 1:
-                adiv=8192;
+                adiv=8192.0;
                 break;
             case 2:
-                adiv=4096;
+                adiv=4096.0;
                 break;
             case 3:
-                adiv=2048;
+                adiv=2048.0;
                 break;
 
 
@@ -185,7 +214,7 @@ public class BluetoothLeService extends Service {
 
         switch (myMota.conf[2]){
             case 0:
-                gdiv=131;
+                gdiv=131.0;
                 break;
             case 1:
                 gdiv=65.5;
@@ -194,7 +223,7 @@ public class BluetoothLeService extends Service {
                 gdiv=32.8;
                 break;
             case 3:
-                gdiv=16;
+                gdiv=16.0;
                 break;
 
 
@@ -219,12 +248,14 @@ public class BluetoothLeService extends Service {
 
     public long parseAccel(byte a, byte b){
 
+
         long val = ((a&0xFF)<<8)|((b&0xFF));
 
         if (val >= 0x8000){
             val= -((65535 - val) + 1);
         }
 
+        Log.i("ParseAccel", a + b + val+"");
         return val;
     }
 
@@ -236,8 +267,8 @@ public class BluetoothLeService extends Service {
             output[k]=Double.toString(values[k]);
 
         }
-        // Log.i("AData:", output[0]+"/"+output[1]+"/"+output[2]);
-        // Log.i("GData:", output[3]+"/"+output[4]+"/"+output[5]);
+         Log.i("AData:", output[0]+"/"+output[1]+"/"+output[2]);
+         Log.i("GData:", output[3]+"/"+output[4]+"/"+output[5]);
         File exportDir = new File(Environment.getExternalStorageDirectory(), "");
 
         if (!exportDir.exists()) {
@@ -268,6 +299,13 @@ public class BluetoothLeService extends Service {
             }
         }
 
+    }
+
+    void sendLog(String mensaje){
+        Context ctx = getApplicationContext();
+        Intent myintent = new Intent("LogUpdate");
+        myintent.putExtra("MSG",mensaje);
+        ctx.sendBroadcast(myintent);
     }
 
 

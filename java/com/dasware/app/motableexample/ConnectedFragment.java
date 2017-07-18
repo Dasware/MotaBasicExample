@@ -14,6 +14,7 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.util.TimeUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,7 +26,11 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.opencsv.CSVWriter;
+
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 import static android.content.ContentValues.TAG;
 import static android.content.Context.BIND_AUTO_CREATE;
@@ -38,7 +43,10 @@ public class ConnectedFragment extends Fragment {
     SeekBar accelconf;
     SeekBar gyroconf;
     Button startBtn;
+    Button sendBtn;
     TextView acceltv;
+    TextView logtv;
+    public static long stime;
     AlertDialog myDialog;
     TextView gyrotv;
     boolean bound;
@@ -51,9 +59,14 @@ public class ConnectedFragment extends Fragment {
             switch (action){
                 case "conectado":
                     changeView();
+                    logtv.setText(logtv.getText()+"Connected!!"+"\n");
                     break;
                 case "Stop":
                     stopandsend();
+                    break;
+                case "LogUpdate":
+                    String msg = intent.getStringExtra("MSG");
+                    logtv.setText(logtv.getText()+msg+"\n");
                     break;
             }
         }
@@ -70,6 +83,7 @@ public class ConnectedFragment extends Fragment {
         IntentFilter myintentfilter = new IntentFilter();
         myintentfilter.addAction("conectado");
         myintentfilter.addAction("Stop");
+        myintentfilter.addAction("LogUpdate");
         getContext().registerReceiver(myBroadcastReceiver, myintentfilter);
         Log.i("CF", "onCreate");
     }
@@ -123,22 +137,27 @@ public class ConnectedFragment extends Fragment {
         final ProgressBar mb = (ProgressBar)getView().findViewById(R.id.readingpb) ;
 
         accelconf = (SeekBar) getView().findViewById(R.id.accelSb);
-        gyroconf = (SeekBar) getView().findViewById(R.id.accelSb);
+        gyroconf = (SeekBar) getView().findViewById(R.id.gyroSB);
         acceltv = (TextView) getView().findViewById(R.id.acceltv);
         gyrotv = (TextView) getView().findViewById(R.id.gyrotv);
         startBtn = (Button) getView().findViewById(R.id.startBtn);
-
+        sendBtn = (Button) getView().findViewById(R.id.sendBtn);
+        sendBtn.setEnabled(false);
+        logtv= (TextView)getView().findViewById(R.id.logtv);
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mBluetoothLeService.conf(conf[0],conf[1],conf[2]);
                 if(conf[0]==0){
-                    conf[1]=1;
                     startBtn.setText("Start");
-                    sendViaMail();
+                    addStopLine();
+                    sendBtn.setEnabled(true);
                     mb.setVisibility(View.GONE);
+                    conf[0]=1;
 
                 }else{
+                    sendBtn.setEnabled(false);
+                    stime = System.currentTimeMillis();
                     conf[0]=0;
                     startBtn.setText("Stop");
                     mb.setVisibility(View.VISIBLE);
@@ -147,11 +166,19 @@ public class ConnectedFragment extends Fragment {
             }
         });
 
+        sendBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendViaMail();
+            }
+        });
+
         accelconf.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 conf[1]=(byte)progress;
-                acceltv.setText("Accel Range: ±"+progress);
+                int val[]={2,4,8,16};
+                acceltv.setText("Accel Range: ±"+val[progress]);
             }
 
             @Override
@@ -169,7 +196,8 @@ public class ConnectedFragment extends Fragment {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 conf[2]=(byte)progress;
-                gyrotv.setText("Gyro Range: ±"+progress);
+                int val[]={250,500,1000,2000};
+                gyrotv.setText("Gyro Range: ±"+val[progress]);
             }
 
             @Override
@@ -199,6 +227,7 @@ public class ConnectedFragment extends Fragment {
             emailIntent.setType("vnd.android.cursor.dir/email");
             emailIntent.putExtra(Intent.EXTRA_STREAM, path);
             emailIntent.putExtra(Intent.EXTRA_SUBJECT, "IMUDS");
+            emailIntent.putExtra(Intent.EXTRA_TEXT,logtv.getText());
             getContext().startActivity(Intent.createChooser(emailIntent, "Send email..."));
         }
 
@@ -223,6 +252,51 @@ public class ConnectedFragment extends Fragment {
         file.delete();
 
     }
+
+
+    private void addStopLine() {
+
+        CSVWriter csvWrite;
+
+        String output[]=new String[7];
+        for(int k = 0;k<7;k++){
+            output[k]="##STOPPED##";
+
+        }
+        Log.i("AData:", output[0]+"/"+output[1]+"/"+output[2]);
+        Log.i("GData:", output[3]+"/"+output[4]+"/"+output[5]);
+        File exportDir = new File(Environment.getExternalStorageDirectory(), "");
+
+        if (!exportDir.exists()) {
+            exportDir.mkdirs();
+        }
+
+        File file = new File(exportDir, "TestmotaIMUDS.csv");
+
+        if(file.exists()){
+            try {
+                csvWrite = new CSVWriter(new FileWriter(file,true), ';');
+                csvWrite.writeNext(output,true);
+                csvWrite.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }else{
+            try {
+                file.createNewFile();
+                csvWrite = new CSVWriter(new FileWriter(file,true), ';');
+                csvWrite.writeNext(output,true);
+                csvWrite.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
 
 
 }
